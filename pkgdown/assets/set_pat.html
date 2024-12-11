@@ -12,12 +12,6 @@
     .hidden {
       display: none;
     }
-    .output {
-      margin-top: 1em;
-      padding: 1em;
-      border: 1px solid #ddd;
-      background: #f9f9f9;
-    }
     button {
       cursor: pointer;
       padding: 0.5em 1em;
@@ -28,7 +22,7 @@
 <body>
   <h1>GitHub Personal Access Token (PAT) Setup</h1>
 
-  <ol>
+  <ol id="steps">
     <li>
       <a href="https://github.com/settings/tokens/new?scopes=repo&description=gsmdash" target="_blank">Create a GitHub PAT</a> (be sure to copy the value!)
     </li>
@@ -40,15 +34,9 @@
       <input type="password" id="pat" placeholder="Enter your GitHub PAT" style="width: 100%; padding: 0.5em;">
       <button id="submit">Submit</button>
     </li>
-    <li>
-      <a href="https://github.com/settings/tokens" target="_blank">Delete the PAT.</a>
-    </li>
   </ol>
 
-  <div id="output" class="hidden output">
-    <p id="message"></p>
-  </div>
-
-  <script src="githubPAT.js"></script>
+  <script src="gh.js"></script>
+  <script src="setPAT.js"></script>
 </body>
 </html>
