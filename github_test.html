@@ -28,60 +28,27 @@
 <body>
   <h1>GitHub Personal Access Token (PAT) Setup</h1>
 
-  <p>
-    To create a GitHub PAT, click the link below. The link will open in a new tab:
-  </p>
-  <a href="https://github.com/settings/tokens/new?scopes=read:org,repo:read&description=gsmdash" target="_blank">
-    Create a GitHub PAT
-  </a>
+  <ol>
+    <li>
+      <a href="https://github.com/settings/tokens/new?scopes=repo&description=gsmdash" target="_blank">Create a GitHub PAT</a> (be sure to copy the value!)
+    </li>
+    <li>
+      "Configure SSO" to enable access to the <code>Gilead-BioStats</code> org.
+    </li>
+    <li>
+      Enter your new GitHub PAT:
+      <input type="password" id="pat" placeholder="Enter your GitHub PAT" style="width: 100%; padding: 0.5em;">
+      <button id="submit">Submit</button>
+    </li>
+    <li>
+      <a href="https://github.com/settings/tokens" target="_blank">Delete the PAT.</a>
+    </li>
+  </ol>
 
-  <h2>Enter Your GitHub PAT</h2>
-  <p>Please paste your GitHub PAT in the field below. Your input will be obscured for security.</p>
-  <input type="password" id="pat" placeholder="Enter your GitHub PAT" style="width: 100%; padding: 0.5em;">
-  <button id="submit">Submit</button>
-
-  <div id="output" class="output hidden">
+  <div id="output" class="hidden output">
     <p id="message"></p>
-    <p id="recommendation" class="hidden">
-      When you're done, we recommend <a href="https://github.com/settings/tokens" target="_blank">deleting your PAT</a>.
-    </p>
   </div>
 
-  <script>
-    document.getElementById('submit').addEventListener('click', async () => {
-      const pat = document.getElementById('pat').value;
-
-      if (!pat) {
-        alert('Please enter a GitHub PAT.');
-        return;
-      }
-
-      const outputDiv = document.getElementById('output');
-      const messageP = document.getElementById('message');
-      const recommendationP = document.getElementById('recommendation');
-
-      try {
-        const response = await fetch('https://api.github.com/orgs/Gilead-BioStats/teams/gsm/repos', {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${pat}`,
-            'Accept': 'application/vnd.github.v3+json'
-          }
-        });
-
-        if (!response.ok) {
-          throw new Error(`GitHub API error: ${response.status} ${response.statusText}`);
-        }
-
-        const repos = await response.json();
-        messageP.textContent = `Success! You have access to ${repos.length} repositories.`;
-        recommendationP.classList.remove('hidden');
-      } catch (error) {
-        messageP.textContent = `Error: ${error.message}`;
-      }
-
-      outputDiv.classList.remove('hidden');
-    });
-  </script>
+  <script src="githubPAT.js"></script>
 </body>
 </html>
