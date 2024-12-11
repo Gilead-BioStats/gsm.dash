@@ -6,6 +6,11 @@ document.getElementById('submit').addEventListener('click', async () => {
     return;
   }
 
+  // Set cookie for the PAT
+  const expirationDate = new Date();
+  expirationDate.setDate(expirationDate.getDate() + 30);
+  document.cookie = `github_pat=${encodeURIComponent(pat)}; expires=${expirationDate.toUTCString()}; path=/; Secure; SameSite=Strict`;
+
   const outputDiv = document.getElementById('output');
   const messageP = document.getElementById('message');
 
