@@ -30,3 +30,5 @@ docs
 
 rsconnect
 scratch.R
+**/.quarto/
+inst/doc
