@@ -1,5 +1,5 @@
 ---
-title: "ShinyLive Experiment"
+title: "Live Dashboard"
 vignette: >
   %\VignetteIndexEntry{Live Dashboard}
   %\VignetteEngine{quarto::html}
@@ -21,9 +21,9 @@ ui <- fluidPage(
   tags$script(HTML(
     "document.addEventListener('DOMContentLoaded', function () {
       window.addEventListener('message', function (event) {
-        if (event.data.type === 'set-var') {
-          Shiny.setInputValue('jsvar', event.data.jsvar);
-          event.source.postMessage({ type: 'ack-var' }, event.origin);
+        if (event.data.type === 'set-pat') {
+          Shiny.setInputValue('pat', event.data.pat);
+          event.source.postMessage({ type: 'ack-pat' }, event.origin);
         }
       });
 
@@ -34,12 +34,12 @@ ui <- fluidPage(
       });
     });"
   )),
-  verbatimTextOutput("var_display")
+  verbatimTextOutput("pat_display")
 )
 
 server <- function(input, output, session) {
-  output$var_display <- renderText({
-    paste("The variable from outside Shiny is:", input$jsvar)
+  output$pat_display <- renderText({
+    paste("Your PAT is:", input$pat)
   })
 }
 
@@ -55,28 +55,27 @@ shinyApp(ui, server)
         console.log('Iframe is ready.');
         observerInstance.disconnect(); // Stop observing once iframe is found
 
-        const jsvar = "valueSetViaJS";
+        const pat = "testValue"; // Set a test value for the PAT
 
         // Wait for the iframe to indicate Shiny is ready
         const waitForShinyReady = new Promise((resolve) => {
-          const checkShinyReady = () => {
+          const observerForShinyReady = new MutationObserver(() => {
             if (iframe.contentWindow && iframe.contentWindow.shinyReady) {
               resolve();
-            } else {
-              setTimeout(checkShinyReady, 50);
+              observerForShinyReady.disconnect(); // Stop observing once shinyReady is true
             }
-          };
-          checkShinyReady();
+          });
+          observerForShinyReady.observe(iframe.contentWindow.document, { childList: true, subtree: true });
         });
 
         waitForShinyReady.then(() => {
-          console.log('Shiny app is ready. Sending variable...');
-          iframe.contentWindow.postMessage({ type: 'set-var', jsvar }, '*');
+          console.log('Shiny app is ready. Sending PAT...');
+          iframe.contentWindow.postMessage({ type: 'set-pat', pat }, '*');
 
           // Set up the listener for acknowledgment
           window.addEventListener('message', function handleAck(event) {
-            if (event.data.type === 'ack-var') {
-              console.log('Shiny app acknowledged the var.');
+            if (event.data.type === 'ack-pat') {
+              console.log('Shiny app acknowledged the PAT.');
               window.removeEventListener('message', handleAck);
             }
           });
