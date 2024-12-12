@@ -24,3 +24,5 @@ RoxygenNote: 7.3.2
 Config/Needs/website: quarto
 VignetteBuilder:
     quarto
+Imports: 
+    bslib

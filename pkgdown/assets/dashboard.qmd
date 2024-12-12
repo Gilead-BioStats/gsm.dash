@@ -1,5 +1,5 @@
 ---
-title: "ShinyLive Experiment"
+title: "GitHub Dashboard"
 format: html
 filters:
   - shinylive
@@ -13,11 +13,11 @@ ui <- fluidPage(
   tags$script(HTML(
     "document.addEventListener('DOMContentLoaded', function () {
       window.addEventListener('message', function (event) {
-        if (event.data.type === 'set-var') {
-          Shiny.setInputValue('jsvar', event.data.jsvar);
-          event.source.postMessage({ type: 'ack-var' }, event.origin);
+        if (event.data.type === 'set-var' && event.data.name && event.data.value) {
+          Shiny.setInputValue(event.data.name, event.data.value);
         }
       });
+
       // Notify parent when Shiny is ready
       Shiny.initializedPromise.then(() => {
         window.parent.postMessage({ type: 'shiny-ready' }, '*');
@@ -28,7 +28,7 @@ ui <- fluidPage(
 )
 server <- function(input, output, session) {
   output$var_display <- renderText({
-    paste("The variable from outside Shiny is:", input$jsvar)
+    paste("Var 1 is", input$var1, "and var 2 is", input$var2)
   })
 }
 shinyApp(ui, server)
@@ -42,7 +42,10 @@ shinyApp(ui, server)
       if (iframe) {
         observerInstance.disconnect(); // Stop observing once iframe is found
 
-        const jsvar = "valueSetViaJS";
+        const variables = {
+          var1: "Var 1 value",
+          var2: "Var 2 value"
+        };
 
         // Wait for Shiny-ready message
         window.addEventListener('message', function handleShinyReady(event) {
@@ -51,17 +54,8 @@ shinyApp(ui, server)
             event.origin === window.location.origin &&
             event.source === iframe.contentWindow
           ) {
-            iframe.contentWindow.postMessage({ type: 'set-var', jsvar }, '*');
-
-            // Set up the listener for acknowledgment
-            window.addEventListener('message', function handleAck(event) {
-              if (
-                event.data.type === 'ack-var' &&
-                event.origin === window.location.origin &&
-                event.source === iframe.contentWindow
-              ) {
-                window.removeEventListener('message', handleAck);
-              }
+            Object.entries(variables).forEach(([name, value]) => {
+              iframe.contentWindow.postMessage({ type: 'set-var', name, value }, '*');
             });
 
             window.removeEventListener('message', handleShinyReady);
