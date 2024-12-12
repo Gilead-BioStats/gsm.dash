@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>Simple ShinyLive Test</title>
+<title>ShinyLive Experiment</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -23,21 +23,21 @@ ul.task-list li input[type="checkbox"] {
 </style>
 
 
-<script src="simple_files/libs/clipboard/clipboard.min.js"></script>
-<script src="simple_files/libs/quarto-html/quarto.js"></script>
-<script src="simple_files/libs/quarto-html/popper.min.js"></script>
-<script src="simple_files/libs/quarto-html/tippy.umd.min.js"></script>
-<script src="simple_files/libs/quarto-html/anchor.min.js"></script>
-<link href="simple_files/libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="simple_files/libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
-<script src="simple_files/libs/bootstrap/bootstrap.min.js"></script>
-<link href="simple_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="simple_files/libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+<script src="dashboard_files/libs/clipboard/clipboard.min.js"></script>
+<script src="dashboard_files/libs/quarto-html/quarto.js"></script>
+<script src="dashboard_files/libs/quarto-html/popper.min.js"></script>
+<script src="dashboard_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="dashboard_files/libs/quarto-html/anchor.min.js"></script>
+<link href="dashboard_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="dashboard_files/libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="dashboard_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="dashboard_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="dashboard_files/libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
 <meta name="shinylive:serviceworker_dir" content=".">
-<script src="simple_files/libs/quarto-contrib/shinylive-0.9.1/shinylive/load-shinylive-sw.js" type="module"></script>
-<script src="simple_files/libs/quarto-contrib/shinylive-0.9.1/shinylive/run-python-blocks.js" type="module"></script>
-<link href="simple_files/libs/quarto-contrib/shinylive-0.9.1/shinylive/shinylive.css" rel="stylesheet">
-<link href="simple_files/libs/quarto-contrib/shinylive-quarto-css/shinylive-quarto.css" rel="stylesheet">
+<script src="dashboard_files/libs/quarto-contrib/shinylive-0.9.1/shinylive/load-shinylive-sw.js" type="module"></script>
+<script src="dashboard_files/libs/quarto-contrib/shinylive-0.9.1/shinylive/run-python-blocks.js" type="module"></script>
+<link href="dashboard_files/libs/quarto-contrib/shinylive-0.9.1/shinylive/shinylive.css" rel="stylesheet">
+<link href="dashboard_files/libs/quarto-contrib/shinylive-quarto-css/shinylive-quarto.css" rel="stylesheet">
 
 
 </head>
@@ -50,7 +50,7 @@ ul.task-list li input[type="checkbox"] {
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
-<h1 class="title">Simple ShinyLive Test</h1>
+<h1 class="title">ShinyLive Experiment</h1>
 </div>
 
 
@@ -67,32 +67,80 @@ ul.task-list li input[type="checkbox"] {
 </header>
 
 
+<div id="dashboard-app">
 <pre class="shinylive-r" data-engine="r"><code>#| '!! shinylive warning !!': |
 #|   shinylive does not work in self-contained HTML documents.
 #|   Please set `embed-resources: false` in your metadata.
 #| standalone: true
-#| viewerHeight: 300
 library(shiny)
-
 ui &lt;- fluidPage(
-  titlePanel("Simple ShinyLive App"),
-  sidebarLayout(
-    sidebarPanel(
-      sliderInput("num", "Choose a number:", min = 1, max = 100, value = 50)
-    ),
-    mainPanel(
-      textOutput("selected")
-    )
-  )
+  tags$script(HTML(
+    "document.addEventListener('DOMContentLoaded', function () {
+      window.addEventListener('message', function (event) {
+        if (event.data.type === 'set-var') {
+          Shiny.setInputValue('jsvar', event.data.jsvar);
+          event.source.postMessage({ type: 'ack-var' }, event.origin);
+        }
+      });
+      // Notify parent when Shiny is ready
+      Shiny.initializedPromise.then(() =&gt; {
+        window.parent.postMessage({ type: 'shiny-ready' }, '*');
+      });
+    });"
+  )),
+  verbatimTextOutput("var_display")
 )
-
 server &lt;- function(input, output, session) {
-  output$selected &lt;- renderText({
-    paste("You selected:", input$num)
+  output$var_display &lt;- renderText({
+    paste("The variable from outside Shiny is:", input$jsvar)
   })
 }
-
 shinyApp(ui, server)</code></pre>
+</div>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const observer = new MutationObserver((mutations, observerInstance) => {
+      const iframe = document.querySelector('#dashboard-app iframe');
+      if (iframe) {
+        observerInstance.disconnect(); // Stop observing once iframe is found
+
+        const jsvar = "valueSetViaJS";
+
+        // Wait for Shiny-ready message
+        window.addEventListener('message', function handleShinyReady(event) {
+          if (
+            event.data.type === 'shiny-ready' &&
+            event.origin === window.location.origin &&
+            event.source === iframe.contentWindow
+          ) {
+            iframe.contentWindow.postMessage({ type: 'set-var', jsvar }, '*');
+
+            // Set up the listener for acknowledgment
+            window.addEventListener('message', function handleAck(event) {
+              if (
+                event.data.type === 'ack-var' &&
+                event.origin === window.location.origin &&
+                event.source === iframe.contentWindow
+              ) {
+                window.removeEventListener('message', handleAck);
+              }
+            });
+
+            window.removeEventListener('message', handleShinyReady);
+          }
+        });
+      }
+    });
+
+    // Observe the DOM for changes in the div containing the iframe
+    const target = document.querySelector('#dashboard-app');
+    if (target) {
+      observer.observe(target, { childList: true, subtree: true });
+    } else {
+      console.error('Target div for iframe not found.');
+    }
+  });
+</script>
 
 </main>
 <!-- /main column -->
