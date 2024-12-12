@@ -33,7 +33,7 @@ jobs:
       - name: Set up shinylive
         run: |
           cd vignettes
-          quarto add quarto-ext/shinylive
+          quarto add quarto-ext/shinylive --no-input
 
       - uses: r-lib/actions/setup-pandoc@v2
 
