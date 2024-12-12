@@ -12,19 +12,21 @@
     .hidden {
       display: none;
     }
+    ul {
+      list-style-type: disc;
+      margin-left: 2em;
+    }
   </style>
 </head>
 <body>
-  <div id="output" class="hidden"></div>
+  <div id="output"></div>
   <script src="gh.js"></script>
   <script>
     async function initializePage() {
-      const outputDiv = document.getElementById('output');
       const pat = getCookie('github_pat');
 
       if (!pat) {
-        outputDiv.innerHTML = '<a href="set_pat.html">Set up your GitHub PAT to continue.</a>';
-        outputDiv.classList.remove('hidden');
+        window.location.href = 'set_pat.html';
         return;
       }
 
@@ -32,17 +34,40 @@
         const isValid = await validatePAT(pat);
 
         if (!isValid) {
-          outputDiv.innerHTML = '<a href="set_pat.html">Set up your GitHub PAT to continue.</a>';
-          outputDiv.classList.remove('hidden');
+          window.location.href = 'set_pat.html';
           return;
         }
 
-        const repos = await fetchRepos(pat);
-        outputDiv.textContent = `You have access to ${repos.length} repositories.`;
-        outputDiv.classList.remove('hidden');
+        const teams = await fetchUserTeams(pat);
+
+        const groupedTeams = teams.reduce((acc, team) => {
+          const orgName = team.organization.name || team.organization.login;
+          if (!acc[orgName]) {
+            acc[orgName] = [];
+          }
+          acc[orgName].push(team.name);
+          return acc;
+        }, {});
+
+        const outputDiv = document.getElementById('output');
+        outputDiv.innerHTML = '';
+
+        Object.entries(groupedTeams).forEach(([orgName, teamNames]) => {
+          const orgHeader = document.createElement('h3');
+          orgHeader.textContent = orgName;
+          outputDiv.appendChild(orgHeader);
+
+          const teamList = document.createElement('ul');
+          teamNames.forEach(teamName => {
+            const teamItem = document.createElement('li');
+            teamItem.textContent = teamName;
+            teamList.appendChild(teamItem);
+          });
+          outputDiv.appendChild(teamList);
+        });
       } catch (error) {
-        outputDiv.innerHTML = '<a href="set_pat.html">Set up your GitHub PAT to continue.</a>';
-        outputDiv.classList.remove('hidden');
+        console.error('Error fetching user teams:', error);
+        window.location.href = 'set_pat.html';
       }
     }
 
