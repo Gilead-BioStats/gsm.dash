@@ -6,6 +6,14 @@ function getCookie(name) {
   return null;
 }
 
+
+// Save the PAT in a cookie
+function savePAT(pat) {
+  const expirationDate = new Date();
+  expirationDate.setDate(expirationDate.getDate() + 30);
+  document.cookie = `github_pat=${encodeURIComponent(pat)}; expires=${expirationDate.toUTCString()}; path=/; Secure; SameSite=Strict`;
+}
+
 // General function to call GitHub API endpoints
 async function ghEndpoint(pat, endpoint) {
   const url = `https://api.github.com/${endpoint}`;
@@ -40,20 +48,25 @@ async function validatePAT(pat) {
   }
 }
 
-// Fetch repositories using the PAT
-async function fetchRepos(pat) {
+// Fetch user teams using the PAT
+async function fetchUserTeams(pat) {
   try {
-    const response = await ghEndpoint(pat, 'orgs/Gilead-BioStats/teams/gsm/repos');
-    return response.json();
+    const response = await ghEndpoint(pat, 'user/teams');
+    return response.json(); // Returns a list of teams
   } catch (error) {
-    console.error('Error fetching repositories:', error);
+    console.error('Error fetching user teams:', error);
     throw error;
   }
 }
 
-// Save the PAT in a cookie
-function savePAT(pat) {
-  const expirationDate = new Date();
-  expirationDate.setDate(expirationDate.getDate() + 30);
-  document.cookie = `github_pat=${encodeURIComponent(pat)}; expires=${expirationDate.toUTCString()}; path=/; Secure; SameSite=Strict`;
+// Fetch repositories for a specific team in an organization
+async function fetchTeamRepos(pat, org, team) {
+  try {
+    const endpoint = `orgs/${org}/teams/${team}/repos`;
+    const response = await ghEndpoint(pat, endpoint);
+    return response.json();
+  } catch (error) {
+    console.error(`Error fetching repositories for team '${team}' in organization '${org}':`, error);
+    throw error;
+  }
 }
