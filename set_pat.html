@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GitHub PAT Setup</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 2em;
+    }
+    .hidden {
+      display: none;
+    }
+    button {
+      cursor: pointer;
+      padding: 0.5em 1em;
+      font-size: 1em;
+    }
+  </style>
+</head>
+<body>
+  <h1>GitHub Personal Access Token (PAT) Setup</h1>
+
+  <ol id="steps">
+    <li>
+      <a href="https://github.com/settings/tokens/new?scopes=repo&description=gsmdash" target="_blank">Create a GitHub PAT</a> (be sure to copy the value!)
+    </li>
+    <li>
+      "Configure SSO" to enable access to the <code>Gilead-BioStats</code> org.
+    </li>
+    <li>
+      Enter your new GitHub PAT:
+      <input type="password" id="pat" placeholder="Enter your GitHub PAT" style="width: 100%; padding: 0.5em;">
+      <button id="submit">Submit</button>
+    </li>
+  </ol>
+
+  <script src="gh.js"></script>
+  <script src="setPAT.js"></script>
+</body>
+</html>
