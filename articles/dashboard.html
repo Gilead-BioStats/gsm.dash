@@ -69,7 +69,7 @@
 
 
 
-    <header id="title-block-header" class="quarto-title-block"><h1 class="title">ShinyLive Experiment</h1></header><div class="shinylive" data-shinylive-id="dashboard-app">
+    <header id="title-block-header" class="quarto-title-block"><h1 class="title">ShinyLive Experiment</h1></header><div id="dashboard-app">
 <pre class="shinylive-r" data-engine="r"><code><span><span class="co">#| '!! shinylive warning !!': |</span></span>
 <span><span class="co">#|   shinylive does not work in self-contained HTML documents.</span></span>
 <span><span class="co">#|   Please set `embed-resources: false` in your metadata.</span></span>
@@ -86,10 +86,9 @@
 <span><span class="st">        }</span></span>
 <span><span class="st">      });</span></span>
 <span><span class="st"></span></span>
-<span><span class="st">      // Set a property on the iframe's window object to indicate Shiny is ready</span></span>
+<span><span class="st">      // Notify parent when Shiny is ready</span></span>
 <span><span class="st">      Shiny.initializedPromise.then(() =&gt; {</span></span>
-<span><span class="st">        console.log('Shiny is fully initialized!');</span></span>
-<span><span class="st">        window.shinyReady = true;</span></span>
+<span><span class="st">        window.parent.postMessage({ type: 'shiny-ready' }, '*');</span></span>
 <span><span class="st">      });</span></span>
 <span><span class="st">    });"</span></span>
 <span>  <span class="op">)</span><span class="op">)</span>,</span>
@@ -107,42 +106,40 @@
 <script>
   document.addEventListener('DOMContentLoaded', function () {
     const observer = new MutationObserver((mutations, observerInstance) => {
-      const iframe = document.querySelector('div[data-shinylive-id="dashboard-app"] iframe');
+      const iframe = document.querySelector('#dashboard-app iframe');
       if (iframe) {
-        console.log('Iframe is ready.');
         observerInstance.disconnect(); // Stop observing once iframe is found
 
         const jsvar = "valueSetViaJS";
 
-        // Wait for the iframe to indicate Shiny is ready
-        const waitForShinyReady = new Promise((resolve) => {
-          const checkShinyReady = () => {
-            if (iframe.contentWindow && iframe.contentWindow.shinyReady) {
-              resolve();
-            } else {
-              setTimeout(checkShinyReady, 50);
-            }
-          };
-          checkShinyReady();
-        });
+        // Wait for Shiny-ready message
+        window.addEventListener('message', function handleShinyReady(event) {
+          if (
+            event.data.type === 'shiny-ready' &&
+            event.origin === window.location.origin &&
+            event.source === iframe.contentWindow
+          ) {
+            iframe.contentWindow.postMessage({ type: 'set-var', jsvar }, '*');
 
-        waitForShinyReady.then(() => {
-          console.log('Shiny app is ready. Sending variable...');
-          iframe.contentWindow.postMessage({ type: 'set-var', jsvar }, '*');
+            // Set up the listener for acknowledgment
+            window.addEventListener('message', function handleAck(event) {
+              if (
+                event.data.type === 'ack-var' &&
+                event.origin === window.location.origin &&
+                event.source === iframe.contentWindow
+              ) {
+                window.removeEventListener('message', handleAck);
+              }
+            });
 
-          // Set up the listener for acknowledgment
-          window.addEventListener('message', function handleAck(event) {
-            if (event.data.type === 'ack-var') {
-              console.log('Shiny app acknowledged the var.');
-              window.removeEventListener('message', handleAck);
-            }
-          });
+            window.removeEventListener('message', handleShinyReady);
+          }
         });
       }
     });
 
     // Observe the DOM for changes in the div containing the iframe
-    const target = document.querySelector('div[data-shinylive-id="dashboard-app"]');
+    const target = document.querySelector('#dashboard-app');
     if (target) {
       observer.observe(target, { childList: true, subtree: true });
     } else {
