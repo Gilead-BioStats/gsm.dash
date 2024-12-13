@@ -1,3 +1,5 @@
+import { gh } from './gh.js';
+
 document.getElementById('submit').addEventListener('click', async () => {
   const pat = document.getElementById('pat').value;
   const steps = document.getElementById('steps');
@@ -9,7 +11,7 @@ document.getElementById('submit').addEventListener('click', async () => {
 
   try {
     // Step 4: Validate the PAT
-    const isValid = await validatePAT(pat);
+    const isValid = await gh.validatePAT(pat);
 
     let step4 = document.getElementById('step-4');
     if (!step4) {
@@ -20,7 +22,7 @@ document.getElementById('submit').addEventListener('click', async () => {
 
     if (isValid) {
       step4.textContent = 'Validate the PAT: valid!';
-      savePAT(pat);
+      gh.savePAT(pat);
 
       // Step 5: Provide a link back to the referring page if it exists
       const referrer = document.referrer;

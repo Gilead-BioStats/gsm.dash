@@ -1,75 +1,24 @@
 ---
 title: "GitHub Dashboard"
-format: html
+format: 
+  html:
+    page-layout: custom
 filters:
   - shinylive
 ---
 
+<script src="filterConsole.js"></script>
+
 ::: {#dashboard-app}
 ```{shinylive-r}
 #| standalone: true
-library(shiny)
-ui <- fluidPage(
-  tags$script(HTML(
-    "document.addEventListener('DOMContentLoaded', function () {
-      window.addEventListener('message', function (event) {
-        if (event.data.type === 'set-var' && event.data.name && event.data.value) {
-          Shiny.setInputValue(event.data.name, event.data.value);
-        }
-      });
+#| viewerHeight: 1000
+## file: app.R
+{{< include appFiles/app.R >}}
 
-      // Notify parent when Shiny is ready
-      Shiny.initializedPromise.then(() => {
-        window.parent.postMessage({ type: 'shiny-ready' }, '*');
-      });
-    });"
-  )),
-  verbatimTextOutput("var_display")
-)
-server <- function(input, output, session) {
-  output$var_display <- renderText({
-    paste("Var 1 is", input$var1, "and var 2 is", input$var2)
-  })
-}
-shinyApp(ui, server)
+## file: shinyliveCommunication-app.js
+{{< include appFiles/shinyliveCommunication-app.js >}}
 ```
 :::
 
-<script>
-  document.addEventListener('DOMContentLoaded', function () {
-    const observer = new MutationObserver((mutations, observerInstance) => {
-      const iframe = document.querySelector('#dashboard-app iframe');
-      if (iframe) {
-        observerInstance.disconnect(); // Stop observing once iframe is found
-
-        const variables = {
-          var1: "Var 1 value",
-          var2: "Var 2 value"
-        };
-
-        // Wait for Shiny-ready message
-        window.addEventListener('message', function handleShinyReady(event) {
-          if (
-            event.data.type === 'shiny-ready' &&
-            event.origin === window.location.origin &&
-            event.source === iframe.contentWindow
-          ) {
-            Object.entries(variables).forEach(([name, value]) => {
-              iframe.contentWindow.postMessage({ type: 'set-var', name, value }, '*');
-            });
-
-            window.removeEventListener('message', handleShinyReady);
-          }
-        });
-      }
-    });
-
-    // Observe the DOM for changes in the div containing the iframe
-    const target = document.querySelector('#dashboard-app');
-    if (target) {
-      observer.observe(target, { childList: true, subtree: true });
-    } else {
-      console.error('Target div for iframe not found.');
-    }
-  });
-</script>
+<script type="module" src="dashboard.js"></script>
