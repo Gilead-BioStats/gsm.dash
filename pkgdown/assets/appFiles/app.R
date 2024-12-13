@@ -1,19 +1,15 @@
-suppressPackageStartupMessages(library(shiny))
-suppressPackageStartupMessages(library(bslib))
-suppressPackageStartupMessages(library(htmltools))
-
 ui <- bslib::page_sidebar(
   sidebar = bslib::sidebar(
-    selectInput("orgName", "Organization", choices = "Loading..."),
-    selectInput("team", "Team", choices = "Loading..."),
-    selectInput("repo", "Repository", choices = "Coming soon...")
+    shiny::selectInput("orgName", "Organization", choices = "Loading..."),
+    shiny::selectInput("team", "Team", choices = "Loading..."),
+    shiny::selectInput("repo", "Repository", choices = "Coming soon...")
   ),
   htmltools::includeScript("shinyliveCommunication-app.js"),
-  textOutput("var_display")
+  shiny::textOutput("var_display")
 )
 
 server <- function(input, output, session) {
-  output$var_display <- renderText({
+  output$var_display <- shiny::renderText({
     "Coming soon!"
   })
 
@@ -47,4 +43,4 @@ server <- function(input, output, session) {
     shiny::bindEvent(teams())
 }
 
-shinyApp(ui, server)
+shiny::shinyApp(ui, server)
