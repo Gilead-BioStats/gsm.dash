@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>ShinyLive Experiment</title>
+<title>GitHub Dashboard</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -44,13 +44,11 @@ ul.task-list li input[type="checkbox"] {
 
 <body class="fullcontent">
 
-<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
-
-<main class="content" id="quarto-document-content">
+<div class="page-layout-custom">  
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
-<h1 class="title">ShinyLive Experiment</h1>
+<h1 class="title">GitHub Dashboard</h1>
 </div>
 
 
@@ -67,83 +65,134 @@ ul.task-list li input[type="checkbox"] {
 </header>
 
 
+<script src="filterConsole.js"></script>
 <div id="dashboard-app">
 <pre class="shinylive-r" data-engine="r"><code>#| '!! shinylive warning !!': |
 #|   shinylive does not work in self-contained HTML documents.
 #|   Please set `embed-resources: false` in your metadata.
 #| standalone: true
-library(shiny)
-ui &lt;- fluidPage(
-  tags$script(HTML(
-    "document.addEventListener('DOMContentLoaded', function () {
-      window.addEventListener('message', function (event) {
-        if (event.data.type === 'set-var') {
-          Shiny.setInputValue('jsvar', event.data.jsvar);
-          event.source.postMessage({ type: 'ack-var' }, event.origin);
-        }
-      });
-      // Notify parent when Shiny is ready
-      Shiny.initializedPromise.then(() =&gt; {
-        window.parent.postMessage({ type: 'shiny-ready' }, '*');
-      });
-    });"
-  )),
-  verbatimTextOutput("var_display")
+#| viewerHeight: 1000
+## file: app.R
+suppressPackageStartupMessages(library(shiny))
+suppressPackageStartupMessages(library(bslib))
+suppressPackageStartupMessages(library(htmltools))
+
+ui &lt;- bslib::page_sidebar(
+  sidebar = bslib::sidebar(
+    selectInput("orgName", "Organization", choices = "Loading..."),
+    selectInput("team", "Team", choices = "Loading..."),
+    selectInput("repo", "Repository", choices = "Coming soon...")
+  ),
+  htmltools::includeScript("shinyliveCommunication-app.js"),
+  textOutput("var_display")
 )
+
 server &lt;- function(input, output, session) {
   output$var_display &lt;- renderText({
-    paste("The variable from outside Shiny is:", input$jsvar)
+    "Coming soon!"
   })
-}
-shinyApp(ui, server)</code></pre>
-</div>
-<script>
-  document.addEventListener('DOMContentLoaded', function () {
-    const observer = new MutationObserver((mutations, observerInstance) => {
-      const iframe = document.querySelector('#dashboard-app iframe');
-      if (iframe) {
-        observerInstance.disconnect(); // Stop observing once iframe is found
 
-        const jsvar = "valueSetViaJS";
+  shiny::observe({
+    shiny::req(input$teams)
+    shiny::updateSelectInput(
+      session,
+      "orgName",
+      choices = names(input$teams)
+    )
+  }) |&gt;
+    shiny::bindEvent(input$teams, ignoreInit = TRUE, once = TRUE)
 
-        // Wait for Shiny-ready message
-        window.addEventListener('message', function handleShinyReady(event) {
-          if (
-            event.data.type === 'shiny-ready' &&
-            event.origin === window.location.origin &&
-            event.source === iframe.contentWindow
-          ) {
-            iframe.contentWindow.postMessage({ type: 'set-var', jsvar }, '*');
-
-            // Set up the listener for acknowledgment
-            window.addEventListener('message', function handleAck(event) {
-              if (
-                event.data.type === 'ack-var' &&
-                event.origin === window.location.origin &&
-                event.source === iframe.contentWindow
-              ) {
-                window.removeEventListener('message', handleAck);
-              }
-            });
-
-            window.removeEventListener('message', handleShinyReady);
-          }
-        });
-      }
-    });
-
-    // Observe the DOM for changes in the div containing the iframe
-    const target = document.querySelector('#dashboard-app');
-    if (target) {
-      observer.observe(target, { childList: true, subtree: true });
-    } else {
-      console.error('Target div for iframe not found.');
+  teams &lt;- shiny::reactive({
+    shiny::req(input$teams)
+    teams &lt;- input$teams
+    orgName &lt;- input$orgName
+    if (!is.null(orgName) &amp;&amp; orgName != "") {
+      return(teams[[orgName]])
     }
-  });
-</script>
+    return(unlist(teams))
+  })
 
-</main>
-<!-- /main column -->
+  shiny::observe({
+    shiny::updateSelectInput(
+      session,
+      "team",
+      choices = teams()
+    )
+  }) |&gt;
+    shiny::bindEvent(teams())
+}
+
+shinyApp(ui, server)
+
+
+## file: shinyliveCommunication-app.js
+/**
+ * Processes a 'set-var' action by updating Shiny input values.
+ *
+ * @param {string} name  - The name of the variable to set.
+ * @param {any}    value - The value of the variable to set.
+ * @param {string} [type] - Optional type indicating how Shiny should handle the input.
+ */
+const processSetVar = function (name, value, type) {
+  if (!name) {
+    console.error('❌ Missing name for set-var action.');
+    return;
+  }
+  if (value === undefined) {
+    console.warn(`⚠️ Variable '${name}' is being set with an undefined value.`);
+  }
+  const inputName = type ? `${name}:${type}` : name;
+  Shiny.setInputValue(inputName, value);
+};
+
+/**
+ * Processes a message action by validating the action and performing the
+ * corresponding operation.
+ *
+ * @param {string} action - The action to process.
+ * @param {object} body   - Additional parameters for this action.
+ */
+const processMessageAction = function (action, body) {
+  const knownActions = ['set-var'];
+
+  if (action === 'set-var') {
+    processSetVar(body.name, body.value, body.type);
+  } else {
+    console.error(
+      `❌ Unknown message event action: '${action}'\n` +
+      `ℹ️ Known message event actions: ${knownActions.map(action =&gt; `'${action}'`).join(', ')}`
+    );
+  }
+};
+
+/**
+ * Adds a message listener to handle incoming messages from the parent window.
+ * Messages with action 'set-var' update Shiny input values.
+ */
+const addMessageListener = function () {
+  window.addEventListener('message', function (event) {
+    processMessageAction(event.data.action, event.data.body);
+  });
+};
+
+/**
+ * Signals to the parent window that the Shiny app is ready by posting a
+ * 'shiny-ready' action. This is triggered after the Shiny initializedPromise
+ * resolves.
+ */
+const signalShinyReady = function () {
+  Shiny.initializedPromise.then(() =&gt; {
+    window.parent.postMessage({ action: 'shiny-ready' }, '*');
+  });
+};
+
+document.addEventListener('DOMContentLoaded', addMessageListener);
+document.addEventListener('DOMContentLoaded', signalShinyReady);
+</code></pre>
+</div>
+<script type="module" src="dashboard.js"></script>
+
+
 <script id="quarto-html-after-body" type="application/javascript">
 window.document.addEventListener("DOMContentLoaded", function (event) {
   const toggleBodyColorMode = (bsSheetEl) => {
@@ -564,7 +613,7 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
   }
 });
 </script>
-</div> <!-- /content -->
+</div> <!-- /container fluid -->
 
 
 
