@@ -38,9 +38,14 @@ jobs:
           extra-packages: any::pkgdown, any::shinylive, local::.
           needs: website
 
+      - name: Render shinylive dashboard.
+        run: |
+          quarto render pkgdown/assets/dashboard.qmd
+
       - name: Delete quarto src files.
         run: |
           rm -rf pkgdown/assets/_extensions
+          rm -rf pkgdown/assets/appFiles
           rm pkgdown/assets/*.qmd
 
       - name: Build site
