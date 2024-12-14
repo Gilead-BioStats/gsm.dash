@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>GitHub Dashboard</title>
+<title>GitHub Team Repo Dashboard</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -48,7 +48,7 @@ ul.task-list li input[type="checkbox"] {
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
-<h1 class="title">GitHub Dashboard</h1>
+<h1 class="title">GitHub Team Repo Dashboard</h1>
 </div>
 
 
@@ -73,24 +73,50 @@ ul.task-list li input[type="checkbox"] {
 #| standalone: true
 #| viewerHeight: 1000
 ## file: app.R
-suppressPackageStartupMessages(library(shiny))
-suppressPackageStartupMessages(library(bslib))
-suppressPackageStartupMessages(library(htmltools))
-
 ui &lt;- bslib::page_sidebar(
   sidebar = bslib::sidebar(
-    selectInput("orgName", "Organization", choices = "Loading..."),
-    selectInput("team", "Team", choices = "Loading..."),
-    selectInput("repo", "Repository", choices = "Coming soon...")
+    shiny::selectInput("orgName", "Organization", choices = "Loading..."),
+    shiny::selectInput("team", "Team", choices = "Loading...")
   ),
   htmltools::includeScript("shinyliveCommunication-app.js"),
-  textOutput("var_display")
+  gt::gt_output("repo_data")
 )
 
 server &lt;- function(input, output, session) {
-  output$var_display &lt;- renderText({
-    "Coming soon!"
+  repo_tbl &lt;- shiny::reactive({
+    shiny::req(input$repos)
+    input$repos |&gt;
+      tibble::enframe(name = "repo_name") |&gt;
+      tidyr::unnest_wider(value)
   })
+
+  output$repo_data &lt;- gt::render_gt({
+    shiny::req(repo_tbl())
+    n_rows &lt;- NROW(repo_tbl())
+    if (n_rows) {
+      multi_row &lt;- n_rows &gt; 1
+      repo_tbl() |&gt;
+        dplyr::mutate(is_private = as.logical(.data$is_private)) |&gt;
+        gt::gt() |&gt;
+        gt::fmt_url("url", as_button = TRUE, label = "link") |&gt;
+        gt::fmt_tf("is_private", tf_style = "yes-no") |&gt;
+        gt::cols_label(
+          repo_name = "Repository",
+          url = "url",
+          is_private = "Private?",
+          description = "Description",
+          stargazers = "Star Gazers",
+          watchers = "Watchers",
+          forks = "Forks",
+          open_issues = "Open Issues"
+        ) |&gt;
+        gt::opt_interactive(
+          use_filters = multi_row,
+          use_highlight = multi_row
+        )
+    }
+  }) |&gt;
+    shiny::bindEvent(repo_tbl())
 
   shiny::observe({
     shiny::req(input$teams)
@@ -120,12 +146,44 @@ server &lt;- function(input, output, session) {
     )
   }) |&gt;
     shiny::bindEvent(teams())
+
+  shiny::observe({
+    orgName = input$orgName
+    teamName = input$team
+    if (orgName != "Loading..." &amp;&amp; teamName != "Loading...") {
+      session$sendCustomMessage(
+        "post-message",
+        list(
+          action = "fetchTeamRepos",
+          body = list(
+            org = orgName,
+            team = teamName
+          )
+        )
+      )
+    }
+  }) |&gt;
+    shiny::bindEvent(input$team)
 }
 
-shinyApp(ui, server)
+shiny::shinyApp(ui, server)
 
 
 ## file: shinyliveCommunication-app.js
+Shiny.addCustomMessageHandler('post-message', function(message) {
+  postMessageToParent(message.action, message.body);
+});
+
+/**
+ * Sends a message to the parent window.
+ *
+ * @param {string} action - The action to send.
+ * @param {object} body   - The message body to include.
+ */
+const postMessageToParent = function (action, body) {
+  window.parent.postMessage({ action, body }, '*');
+};
+
 /**
  * Processes a 'set-var' action by updating Shiny input values.
  *
@@ -182,7 +240,7 @@ const addMessageListener = function () {
  */
 const signalShinyReady = function () {
   Shiny.initializedPromise.then(() =&gt; {
-    window.parent.postMessage({ action: 'shiny-ready' }, '*');
+    postMessageToParent('shiny-ready', {});
   });
 };
 
