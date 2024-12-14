@@ -8,17 +8,7 @@ export const shinyliveCommunicator = {
           observerInstance.disconnect(); // Stop observing once iframe is found
 
           // Wait for Shiny-ready message
-          const handleShinyReady = (event) => {
-            if (
-              event.data.action === 'shiny-ready' &&
-              event.origin === window.location.origin &&
-              event.source === iframe.contentWindow
-            ) {
-              resolve(iframe);
-              window.removeEventListener('message', handleShinyReady);
-            }
-          };
-          window.addEventListener('message', handleShinyReady);
+          this.waitForMessage(iframe, 'shiny-ready').then(() => resolve(iframe));
         }
       });
 
@@ -31,7 +21,42 @@ export const shinyliveCommunicator = {
       }
     });
   },
+
   sendMessage(iframe, action, body) {
     iframe.contentWindow.postMessage({ action, body }, '*');
+  },
+
+  waitForMessage(iframe, action) {
+    return new Promise((resolve) => {
+      const handleMessage = (event) => {
+        if (
+          event.data.action === action &&
+          event.origin === window.location.origin &&
+          event.source === iframe.contentWindow
+        ) {
+          resolve(event.data);
+          window.removeEventListener('message', handleMessage);
+        }
+      };
+      window.addEventListener('message', handleMessage);
+    });
+  },
+
+  observeAction(iframe, action, callback) {
+    const handleMessage = (event) => {
+      if (
+        event.data.action === action &&
+        event.origin === window.location.origin &&
+        event.source === iframe.contentWindow
+      ) {
+        callback(event.data.body);
+      }
+    };
+    window.addEventListener('message', handleMessage);
+
+    return () => {
+      // Return an unsubscribe function
+      window.removeEventListener('message', handleMessage);
+    };
   },
 };

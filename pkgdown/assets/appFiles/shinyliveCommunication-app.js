@@ -1,3 +1,17 @@
+Shiny.addCustomMessageHandler('post-message', function(message) {
+  postMessageToParent(message.action, message.body);
+});
+
+/**
+ * Sends a message to the parent window.
+ *
+ * @param {string} action - The action to send.
+ * @param {object} body   - The message body to include.
+ */
+const postMessageToParent = function (action, body) {
+  window.parent.postMessage({ action, body }, '*');
+};
+
 /**
  * Processes a 'set-var' action by updating Shiny input values.
  *
@@ -54,7 +68,7 @@ const addMessageListener = function () {
  */
 const signalShinyReady = function () {
   Shiny.initializedPromise.then(() => {
-    window.parent.postMessage({ action: 'shiny-ready' }, '*');
+    postMessageToParent('shiny-ready', {});
   });
 };
 
