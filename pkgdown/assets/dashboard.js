@@ -45,15 +45,38 @@ const processedTeams = fetchTeams.then((teams) => {
 // Initialize ShinyLive as a promise
 const shinyReady = shinyliveCommunicator.initialize('#dashboard-app iframe');
 
-// Add functionality to handle 'fetchTeamRepos' action
+// Handle 'fetchTeamRepos' action
 Promise.all([shinyReady, validatedPAT]).then(([iframe, pat]) => {
   const stopFetchingTeamRepos = shinyliveCommunicator.observeAction(
     iframe, 'fetchTeamRepos',
-    (body) => {
+    async (body) => {
       if (body.org && body.team) {
         console.log(`Organization: ${body.org}, Team: ${body.team}`);
-        const repos = gh.fetchTeamRepos(pat, body.org, body.team);
-        repos.then(([repos]) => {console.log(repos);});
+
+        try {
+          const repos = await gh.fetchTeamRepos(pat, body.org, body.team);
+
+          // Process repos into a named list
+          const processedRepos = repos.reduce((acc, repo) => {
+            acc[repo.name] = {
+              url: repo.html_url,
+              is_private: repo.private,
+              description: repo.description || 'No description available',
+              stargazers: repo.stargazers_count || 0,
+              watchers: repo.watchers_count || 0,
+              forks: repo.forks_count || 0,
+              open_issues: repo.open_issues_count || 0
+            };
+            return acc;
+          }, {});
+
+          console.log(processedRepos); // Debugging
+
+          // Send processed repos back to Shiny
+          shinyliveCommunicator.sendMessage(iframe, 'set-var', { name: 'repos', value: processedRepos });
+        } catch (error) {
+          console.error(`Error fetching repositories for ${body.org}/${body.team}:`, error);
+        }
       }
     }
   );

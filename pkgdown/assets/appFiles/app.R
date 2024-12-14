@@ -4,14 +4,44 @@ ui <- bslib::page_sidebar(
     shiny::selectInput("team", "Team", choices = "Loading...")
   ),
   htmltools::includeScript("shinyliveCommunication-app.js"),
-  shiny::textOutput("var_display")
+  gt::gt_output("repo_data")
 )
 
 server <- function(input, output, session) {
-  # stop("Need at least the org slug and maybe team slug")
-  output$var_display <- shiny::renderText({
-    "Coming soon!"
+  repo_tbl <- shiny::reactive({
+    shiny::req(input$repos)
+    input$repos |>
+      tibble::enframe(name = "repo_name") |>
+      tidyr::unnest_wider(value)
   })
+
+  output$repo_data <- gt::render_gt({
+    shiny::req(repo_tbl())
+    n_rows <- NROW(repo_tbl())
+    if (n_rows) {
+      multi_row <- n_rows > 1
+      repo_tbl() |>
+        dplyr::mutate(is_private = as.logical(.data$is_private)) |>
+        gt::gt() |>
+        gt::fmt_url("url", as_button = TRUE, label = "link") |>
+        gt::fmt_tf("is_private", tf_style = "yes-no") |>
+        gt::cols_label(
+          repo_name = "Repository",
+          url = "url",
+          is_private = "Private?",
+          description = "Description",
+          stargazers = "Star Gazers",
+          watchers = "Watchers",
+          forks = "Forks",
+          open_issues = "Open Issues"
+        ) |>
+        gt::opt_interactive(
+          use_filters = multi_row,
+          use_highlight = multi_row
+        )
+    }
+  }) |>
+    shiny::bindEvent(repo_tbl())
 
   shiny::observe({
     shiny::req(input$teams)
