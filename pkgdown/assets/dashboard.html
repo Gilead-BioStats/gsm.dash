@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>GitHub Dashboard</title>
+<title>GitHub Team Repo Dashboard</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -48,7 +48,7 @@ ul.task-list li input[type="checkbox"] {
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
-<h1 class="title">GitHub Dashboard</h1>
+<h1 class="title">GitHub Team Repo Dashboard</h1>
 </div>
 
 
@@ -76,14 +76,14 @@ ul.task-list li input[type="checkbox"] {
 ui &lt;- bslib::page_sidebar(
   sidebar = bslib::sidebar(
     shiny::selectInput("orgName", "Organization", choices = "Loading..."),
-    shiny::selectInput("team", "Team", choices = "Loading..."),
-    shiny::selectInput("repo", "Repository", choices = "Coming soon...")
+    shiny::selectInput("team", "Team", choices = "Loading...")
   ),
   htmltools::includeScript("shinyliveCommunication-app.js"),
   shiny::textOutput("var_display")
 )
 
 server &lt;- function(input, output, session) {
+  # stop("Need at least the org slug and maybe team slug")
   output$var_display &lt;- shiny::renderText({
     "Coming soon!"
   })
@@ -116,12 +116,34 @@ server &lt;- function(input, output, session) {
     )
   }) |&gt;
     shiny::bindEvent(teams())
+
+  shiny::observe({
+    orgName = input$orgName
+    teamName = input$team
+    if (orgName != "Loading..." &amp;&amp; teamName != "Loading...") {
+      session$sendCustomMessage(
+        "post-message",
+        list(
+          action = "fetchTeamRepos",
+          body = list(
+            org = orgName,
+            team = teamName
+          )
+        )
+      )
+    }
+  }) |&gt;
+    shiny::bindEvent(input$team)
 }
 
 shiny::shinyApp(ui, server)
 
 
 ## file: shinyliveCommunication-app.js
+Shiny.addCustomMessageHandler('post-message', function(message) {
+  postMessageToParent(message.action, message.body);
+});
+
 /**
  * Sends a message to the parent window.
  *

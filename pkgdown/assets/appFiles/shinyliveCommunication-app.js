@@ -1,3 +1,7 @@
+Shiny.addCustomMessageHandler('post-message', function(message) {
+  postMessageToParent(message.action, message.body);
+});
+
 /**
  * Sends a message to the parent window.
  *

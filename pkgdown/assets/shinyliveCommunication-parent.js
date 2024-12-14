@@ -41,4 +41,22 @@ export const shinyliveCommunicator = {
       window.addEventListener('message', handleMessage);
     });
   },
+
+  observeAction(iframe, action, callback) {
+    const handleMessage = (event) => {
+      if (
+        event.data.action === action &&
+        event.origin === window.location.origin &&
+        event.source === iframe.contentWindow
+      ) {
+        callback(event.data.body);
+      }
+    };
+    window.addEventListener('message', handleMessage);
+
+    return () => {
+      // Return an unsubscribe function
+      window.removeEventListener('message', handleMessage);
+    };
+  },
 };
