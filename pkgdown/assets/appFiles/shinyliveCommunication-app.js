@@ -1,4 +1,4 @@
-Shiny.addCustomMessageHandler('post-message', function(message) {
+Shiny.addCustomMessageHandler('request-action', function(message) {
   postMessageToParent(message.action, message.body);
 });
 

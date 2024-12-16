@@ -1,5 +1,4 @@
 ---
-title: "GitHub Team Repo Dashboard"
 format: 
   html:
     page-layout: custom
@@ -15,6 +14,9 @@ filters:
 #| viewerHeight: 1000
 ## file: app.R
 {{< include appFiles/app.R >}}
+
+## file: shinylive_communication-app.R
+{{< include appFiles/shinylive_communication-app.R >}}
 
 ## file: shinyliveCommunication-app.js
 {{< include appFiles/shinyliveCommunication-app.js >}}
