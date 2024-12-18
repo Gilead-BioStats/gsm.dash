@@ -51,8 +51,6 @@ Promise.all([shinyReady, validatedPAT]).then(([iframe, pat]) => {
     iframe, 'fetchTeamRepos',
     async (body) => {
       if (body.org && body.team) {
-        console.log(`Organization: ${body.org}, Team: ${body.team}`);
-
         try {
           const repos = await gh.fetchTeamRepos(pat, body.org, body.team);
 
@@ -69,8 +67,6 @@ Promise.all([shinyReady, validatedPAT]).then(([iframe, pat]) => {
             };
             return acc;
           }, {});
-
-          console.log(processedRepos); // Debugging
 
           // Send processed repos back to Shiny
           shinyliveCommunicator.sendMessage(iframe, 'set-var', { name: 'repos', value: processedRepos });
