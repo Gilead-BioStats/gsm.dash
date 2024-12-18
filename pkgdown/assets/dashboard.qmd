@@ -2,25 +2,41 @@
 format: 
   html:
     page-layout: custom
+    embed-resources: false
 filters:
   - shinylive
 ---
 
 <script src="filterConsole.js"></script>
 
-::: {#dashboard-app}
-```{shinylive-r}
-#| standalone: true
-#| viewerHeight: 1000
-## file: app.R
-{{< include appFiles/app.R >}}
+```{r}
+#| output: asis
+#| echo: false
+filenames <- fs::dir_ls("appFiles", recurse = TRUE) |> 
+  fs::path_rel(start = "appFiles")
 
-## file: shinylive_communication-app.R
-{{< include appFiles/shinylive_communication-app.R >}}
-
-## file: shinyliveCommunication-app.js
-{{< include appFiles/shinyliveCommunication-app.js >}}
+imports <- purrr::map_chr(filenames, \(filename) {
+  glue::glue(
+    .open = "~[",
+    .close = "]~",
+    "## file: ~[filename]~",
+    "{{< include appFiles/~[filename]~ >}}",
+    .sep = "\n"
+  )
+})
+paste(
+  c(
+    "::: {#dashboard-app}",
+    "```{shinylive-r}",
+    "#| standalone: true",
+    "#| viewerHeight: 1000",
+    imports,
+    "```",
+    ":::"
+  ),
+  collapse = "\n"
+) |> 
+  cat()
 ```
-:::
 
 <script type="module" src="dashboard.js"></script>
